@@ -2498,6 +2498,126 @@
       }
     }
 
+
+
+    /* =========================================================
+       Floating video after 15% page scroll
+       ========================================================= */
+    .floating-video-player{
+      position:fixed;
+      z-index:998;
+      right:max(16px,env(safe-area-inset-right));
+      bottom:max(16px,env(safe-area-inset-bottom));
+      width:min(360px,calc(100vw - 32px));
+      padding:6px;
+      border-radius:20px;
+      background:linear-gradient(135deg,#043b50,#021e2b);
+      box-shadow:0 24px 60px rgba(2,30,43,.38);
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transform:translate3d(0,32px,0) scale(.9);
+      transform-origin:right bottom;
+      transition:opacity .35s ease,transform .45s cubic-bezier(.2,.78,.16,1),visibility .35s ease;
+      isolation:isolate;
+    }
+
+    .floating-video-player.is-visible{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+      transform:translate3d(0,0,0) scale(1);
+    }
+
+    .floating-video-shell{
+      position:relative;
+      overflow:hidden;
+      border-radius:15px;
+      background:#000;
+      aspect-ratio:16 / 9;
+    }
+
+    .floating-video-shell iframe{
+      width:100%;
+      height:100%;
+      display:block;
+      border:0;
+    }
+
+    .floating-video-close{
+      position:absolute;
+      z-index:3;
+      top:9px;
+      left:9px;
+      width:32px;
+      height:32px;
+      border:1px solid rgba(255,255,255,.35);
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      padding:0;
+      background:rgba(2,30,43,.82);
+      color:#fff;
+      font-size:18px;
+      line-height:1;
+      box-shadow:0 6px 18px rgba(0,0,0,.24);
+      backdrop-filter:blur(8px);
+      transition:transform .2s ease,background .2s ease;
+    }
+
+    .floating-video-close:hover{
+      transform:scale(1.08);
+      background:#ed3345;
+    }
+
+    .floating-video-label{
+      position:absolute;
+      z-index:2;
+      right:9px;
+      top:9px;
+      max-width:calc(100% - 58px);
+      padding:7px 10px;
+      border-radius:999px;
+      background:rgba(2,30,43,.76);
+      color:#fff;
+      font-size:10px;
+      font-weight:900;
+      backdrop-filter:blur(8px);
+      pointer-events:none;
+    }
+
+    @media(max-width:820px){
+      .floating-video-player{
+        width:min(300px,calc(100vw - 24px));
+        right:max(12px,env(safe-area-inset-right));
+        bottom:max(12px,env(safe-area-inset-bottom));
+      }
+    }
+
+    @media(max-width:560px){
+      .floating-video-player{
+        width:min(230px,calc(100vw - 24px));
+        right:max(10px,env(safe-area-inset-right));
+        /* Keep the video above the two stacked call buttons. */
+        bottom:calc(126px + env(safe-area-inset-bottom));
+        padding:4px;
+        border-radius:16px;
+      }
+
+      .floating-video-shell{border-radius:12px}
+      .floating-video-close{top:7px;left:7px;width:28px;height:28px;font-size:16px}
+      .floating-video-label{top:7px;right:7px;font-size:9px;padding:6px 8px}
+    }
+
+    @media(max-width:380px){
+      .floating-video-player{
+        width:190px;
+        bottom:calc(124px + env(safe-area-inset-bottom));
+      }
+
+      .floating-video-label{display:none}
+    }
+
 </style>
 </head>
 <body>
@@ -2877,6 +2997,13 @@
 <span aria-hidden="true" class="floating-call-icon"><svg fill="none" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.7.6 2.5a2 2 0 0 1-.5 2.1L8 9.5a16 16 0 0 0 6.5 6.5l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.6.5 2.5.6a2 2 0 0 1 1.7 2Z" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path></svg></span>
 <span class="floating-call-number">01145463810</span>
 </a>
+</div>
+<div class="floating-video-player" id="floatingVideoPlayer" aria-hidden="true">
+<button class="floating-video-close" id="floatingVideoClose" type="button" aria-label="إغلاق الفيديو العائم">×</button>
+<div class="floating-video-label">شاهد خدماتنا</div>
+<div class="floating-video-shell">
+<iframe allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube.com/embed/zFIPP-FWE1c?rel=0&amp;modestbranding=1&amp;playsinline=1" title="فيديو خدمات النسر لنقل العفش - مشغل عائم"></iframe>
+</div>
 </div>
 <script>
     const dataLayerPush = (eventName, extra = {}) => {
@@ -3316,6 +3443,51 @@
   } else {
     startImageScrollTransitions();
   }
+})();
+</script>
+
+
+
+<script>
+/* Show the floating video after 15% of the page has been scrolled. */
+(() => {
+  const player = document.getElementById('floatingVideoPlayer');
+  const closeButton = document.getElementById('floatingVideoClose');
+  if (!player || !closeButton) return;
+
+  let dismissed = false;
+  let ticking = false;
+
+  const updateFloatingVideo = () => {
+    const documentHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
+    const scrollableHeight = Math.max(documentHeight - window.innerHeight, 1);
+    const progress = window.scrollY / scrollableHeight;
+    const shouldShow = !dismissed && progress >= 0.15;
+
+    player.classList.toggle('is-visible', shouldShow);
+    player.setAttribute('aria-hidden', String(!shouldShow));
+    ticking = false;
+  };
+
+  const requestUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(updateFloatingVideo);
+  };
+
+  closeButton.addEventListener('click', () => {
+    dismissed = true;
+    player.classList.remove('is-visible');
+    player.setAttribute('aria-hidden', 'true');
+  });
+
+  window.addEventListener('scroll', requestUpdate, {passive:true});
+  window.addEventListener('resize', requestUpdate, {passive:true});
+  window.addEventListener('load', requestUpdate, {once:true});
+  requestUpdate();
 })();
 </script>
 
